@@ -41,9 +41,7 @@ public class GameManager : NetworkBehaviour
     {
         if(isServer)
         {
-            //TODO uncomment
-            //StartCoroutine("WaitForPlayers");
-            StartCoroutine(ShowInfoWaitAndCallFunction(1, "Match is starting..", CmdNewRound));
+            StartCoroutine("WaitForPlayers");
         }
     }
 
@@ -150,19 +148,28 @@ public class GameManager : NetworkBehaviour
     public void CmdPlayerDied(string playerId)
     {
         gameOver = true;
-        RpcPlayerDied(playerId);
+        StartCoroutine(ShowInfoWaitAndCallFunction(4, playerId + " died!", RpcRestartGame));
     }
 
     [ClientRpc]
-    void RpcPlayerDied(string playerId)
+    private void RpcRestartGame()
     {
-        CmdShowInfo(playerId + " died!");
+        gameOver = false;
+        foreach (Player player in players.Values)
+        {
+            player.RpcOnNewGame();
+        }
+        NewRound();
     }
+
 
     // Resets properties to base values and invokes OnNewRound event
     void NewRound()
     {
-        CmdNewRound();
+        if(!gameOver)
+        {
+            CmdNewRound();
+        }
     }
 
     [Command]
@@ -184,24 +191,29 @@ public class GameManager : NetworkBehaviour
         RpcShowSelectedCoinsSymbols(true);
 
         Player[] playersArray = players.Values.ToArray();
+        Player winner = null;
+        Player loser = null;
         Item item1 = playersArray[0].SelectedCoin.Item;
         Item item2 = playersArray[1].SelectedCoin.Item;
         int result = item1.CompareTo(item2);
         string info;
         if (result == 1)
         {
-            RpcChangeCoinOutlineColor(playersArray[0].name, outlineColorGreen, true);
-            RpcChangeCoinOutlineColor(playersArray[1].name, outlineColorRed, true);
-            RpcDamagePlayer(playersArray[1].name, playersArray[0].playerStats.power.CurrentValue);
-            info = playersArray[0].name + " won this round!";
+            winner = playersArray[0];
+            loser = playersArray[1];
+            RpcChangeCoinOutlineColor(winner.name, outlineColorGreen, true);
+            RpcChangeCoinOutlineColor(loser.name, outlineColorRed, true);
+
+            info = winner.name + " won this round!";
         }
         else if (result == -1)
         {
-            RpcChangeCoinOutlineColor(playersArray[0].name, outlineColorRed, true);
-            RpcChangeCoinOutlineColor(playersArray[1].name, outlineColorGreen, true);
+            winner = playersArray[1];
+            loser = playersArray[0];
+            RpcChangeCoinOutlineColor(winner.name, outlineColorGreen, true);
+            RpcChangeCoinOutlineColor(loser.name, outlineColorRed, true);
 
-            RpcDamagePlayer(playersArray[0].name, playersArray[1].playerStats.power.CurrentValue);
-            info = playersArray[1].name + " won this round!";
+            info = winner.name + " won this round!";
         }
         else
         {
@@ -209,7 +221,12 @@ public class GameManager : NetworkBehaviour
             RpcChangeCoinOutlineColor(playersArray[1].name, outlineColorGreen, true);
             info = "It's a draw!";
         }
-        StartCoroutine(ShowInfoWaitAndCallFunction(2, "Coins compared! " + info, NewRound));
+        StartCoroutine(ShowInfoWaitAndCallFunction(3, "Coins compared! " + info, NewRound));
+
+        if(winner != null && loser != null)
+        {
+            RpcDamagePlayer(loser.name, winner.playerStats.power.CurrentValue);
+        }
     }
 
 

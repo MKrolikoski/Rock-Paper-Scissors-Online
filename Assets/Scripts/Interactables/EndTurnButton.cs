@@ -35,7 +35,7 @@ public class EndTurnButton : Interactable
 
     public override void OnMouseClick(Player player)
     {
-        player.CmdEndTurn();
+        player.EndTurn();
         ResetToDefaultValues();
     }
 

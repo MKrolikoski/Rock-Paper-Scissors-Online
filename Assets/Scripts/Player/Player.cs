@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 
 [RequireComponent(typeof(PlayerInput))]
 [RequireComponent(typeof(PlayerStats))]
+[RequireComponent(typeof(PlayerAnimController))]
 public class Player : NetworkBehaviour
 {
     // Player statistics
@@ -11,6 +12,8 @@ public class Player : NetworkBehaviour
     public PlayerStats playerStats;
 
     public Camera playerCamera;
+
+    private PlayerAnimController playerAnimController;
 
 
     // Player input
@@ -71,6 +74,7 @@ public class Player : NetworkBehaviour
     {
         playerInput = GetComponent<PlayerInput>();
         playerStats = GetComponent<PlayerStats>();
+        playerAnimController = GetComponent<PlayerAnimController>();
     }
 
     void Start()
@@ -156,17 +160,22 @@ public class Player : NetworkBehaviour
 
     private void OnDeath()
     {
-        GameManager.instance.CmdPlayerDied(name);
+        GameManager.instance.CmdPlayerDied(name);     
+    }
+
+    public void EndTurn()
+    {
+        CmdEndTurn();
     }
 
     [Command]
-    public void CmdEndTurn()
+    private void CmdEndTurn()
     {
         RpcEndTurn();
     }
 
     [ClientRpc]
-    public void RpcEndTurn()
+    private void RpcEndTurn()
     {
         endedRound = true;
         if(isLocalPlayer)
@@ -220,6 +229,50 @@ public class Player : NetworkBehaviour
         {
             PlayerUI playerUI = GetComponent<PlayerSetup>().playerUIInstance.GetComponent<PlayerUI>();
             playerUI.DisplayText(text);
+        }
+    }
+
+    [ClientRpc]
+    public void RpcOnNewGame()
+    {
+        int hpToGain = 3 - playerStats.hp.CurrentValue;
+        if(isLocalPlayer)
+        {
+            GetComponent<PlayerSetup>().playerUIInstance.GetComponent<PlayerUI>().playerHealthDisplay.ResetHealth();
+        }
+        else
+        {
+            GetComponentInChildren<EnemyHealthUI>().healthDisplay.ResetHealth();
+        }
+        playerStats.hp.GainHp(hpToGain);
+    }
+
+    public void PlayerPointing(bool bIsPointing, Coin hoveredCoin = null)
+    {       
+        if(hoveredCoin != null)
+        {
+            CmdPlayerPointing(bIsPointing, GetCoinIndex(hoveredCoin));
+        }
+        else
+        {
+            CmdPlayerPointing(bIsPointing, 0);
+        }
+    }
+
+    [Command]
+    private void CmdPlayerPointing(bool bIsPointing, int pointLocation)
+    {
+        RpcPlayerPointing(bIsPointing, pointLocation);
+    }
+
+    [ClientRpc]
+    private void RpcPlayerPointing(bool bIsPointing, int pointLocation)
+    {
+        playerAnimController.handAnimator.SetBool("bIsPointing", bIsPointing);
+        playerAnimController.armAnimator.SetBool("bIsPointing", bIsPointing);
+        if(bIsPointing)
+        {
+            playerAnimController.armAnimator.SetInteger("armLocation", pointLocation);
         }
     }
 }

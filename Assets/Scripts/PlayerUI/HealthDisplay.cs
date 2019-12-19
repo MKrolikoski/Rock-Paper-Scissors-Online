@@ -36,6 +36,7 @@ public class HealthDisplay : MonoBehaviour
         }
     }
 
+
     public void ResetHealth()
     {
         for (int i = 0; i < healthImages.Length; i++)

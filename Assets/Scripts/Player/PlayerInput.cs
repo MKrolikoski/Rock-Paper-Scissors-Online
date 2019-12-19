@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[RequireComponent(typeof(PlayerAnimController))]
 public class PlayerInput : MonoBehaviour
 {
     // Layer mask for hovering over coins
@@ -7,6 +8,8 @@ public class PlayerInput : MonoBehaviour
 
     // Currently hovered over coin
     private Interactable hoveredObject;
+
+    private PlayerAnimController animController;
 
     // Hover states
     private enum HoverState { HOVERING, NOT_HOVERING };
@@ -19,6 +22,10 @@ public class PlayerInput : MonoBehaviour
     //------------------------------------//
     //--------------METHODS---------------//
     //------------------------------------//
+
+    private void Awake()
+    {
+    }
 
     void Start()
     {
@@ -40,6 +47,10 @@ public class PlayerInput : MonoBehaviour
                 {
                     hoveredObject.OnMouseHover();
                     hoverState = HoverState.HOVERING;
+                    if(hoveredObject is Coin)
+                    {
+                        GetComponent<Player>().PlayerPointing(true, hoveredObject as Coin);
+                    }
                 }
             }
             // Mouse is already hovering over an object
@@ -61,6 +72,7 @@ public class PlayerInput : MonoBehaviour
             {
                 hoveredObject.OnMouseEndHover();
                 hoverState = HoverState.NOT_HOVERING;
+                GetComponent<Player>().PlayerPointing(false);
                 hoveredObject = null;
             }
         }
